@@ -58,6 +58,9 @@ function verifyData(content) {
     writeData(JSON.stringify(invalidData));
 }
 
+function writeData(content) {
+    
+}
 // function toDB(jsn) {
 //     // Here you can add you firestore/ realtime database or merge the JSON if you want to batch write.
 //     console.log(jsn)
