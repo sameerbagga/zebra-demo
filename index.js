@@ -68,9 +68,8 @@ function verifyData(file, content) {
     console.log("validData = ", validData);
     console.log("invalidData = ", invalidData);
 
-    return writeData(file, 'invalid_records', invalidData);
-
-    // writeData(JSON.stringify(validData));
+    writeData(file, 'invalid_records', invalidData);
+    writeData(file, 'valid_records', validData);
 }
 
 
@@ -89,6 +88,6 @@ const writeData = async (file, bucketName, data) => {
 
     await bucket.upload(tempLocalPath, {destination: file.name});
 
-    const unlink = util.promisify(fs.unlink);
-    return unlink(tempLocalPath);
+    // const unlink = util.promisify(fs.unlink);
+    // return unlink(tempLocalPath);
 }
