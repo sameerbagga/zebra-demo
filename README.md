@@ -1,0 +1,1 @@
+gcloud functions deploy uploadHandler --runtime nodejs8 --trigger-resource valid_records --trigger-event google.storage.object.finalize

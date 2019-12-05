@@ -1,33 +1,46 @@
 const functions = require('firebase-functions');
 const {Storage} = require('@google-cloud/storage');
 const path = require('path');
+const fs = require('fs');
+const util = require('util');
+
+let readFile = util.promisify(fs.readFile);
+let writeFile = util.promisify(fs.writeFile);
+
+
 
 const storage = new Storage({
     projectId: "zebra-260622",
   });
 
-exports.uploadHandler = functions.storage.object().onFinalize((object) => {
-    const filename = path.basename(object.name);
-    const validBucket = storage.bucket('valid_records');
-    const invalidBucket = storage.bucket('invalid_records');
+const validBucket = storage.bucket('valid_records');
+const invalidBucket = storage.bucket('invalid_records');
+
+exports.uploadHandler = async event => {
+    // This event represents the triggering Cloud Storage object.
+    const object = event;
+  
+    const file = storage.bucket(object.bucket).file(object.name);
+    const filePath = `gs://${object.bucket}/${object.name}`;
+    
 
     if (object.contentType !== 'application/json') {
         console.log('This is not a valid JSON file.');
         return null;
     }
 
-    validBucket.file(filename).download((err, contents) => {
+    file.download((err, contents) => {
         if (err) {
             console.log('error', err);
             return null
         }
-
+        console.log("filename = ", file.name);
         console.log("contents = ", JSON.parse(contents));
-        verifyData(JSON.parse(contents));
+        verifyData(file, JSON.parse(contents));
     });
-});
+};
 
-function verifyData(content) {
+function verifyData(file, content) {
     let validData = {
         Grocery: [],
         Bakery: []
@@ -55,13 +68,27 @@ function verifyData(content) {
     console.log("validData = ", validData);
     console.log("invalidData = ", invalidData);
 
-    writeData(JSON.stringify(invalidData));
+    return writeData(file, 'invalid_records', invalidData);
+
+    // writeData(JSON.stringify(validData));
 }
 
-function writeData(content) {
-    
+
+const writeData = async (file, bucketName, data) => {
+    const tempLocalPath = `/tmp/${path.parse(file.name).base}`;
+
+    await file.download({destination: tempLocalPath});
+
+
+    await new Promise((resolve, reject) => {
+        resolve(writeFile(tempLocalPath, JSON.stringify(data, null, 2)));
+    });
+
+    // const gcsPath = `gs://${bucketName}/${file.name}`;
+    const bucket = storage.bucket(bucketName);
+
+    await bucket.upload(tempLocalPath, {destination: file.name});
+
+    const unlink = util.promisify(fs.unlink);
+    return unlink(tempLocalPath);
 }
-// function toDB(jsn) {
-//     // Here you can add you firestore/ realtime database or merge the JSON if you want to batch write.
-//     console.log(jsn)
-// }
